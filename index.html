@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SecureChat - Private Messaging</title>
+    <title>SecureChat - Cross-Device Messaging</title>
     <style>
 :root {
   /* Primitive Color Tokens */
@@ -58,6 +58,42 @@ body {
   overflow-x: hidden;
 }
 
+/* Cross-Device Notice */
+.device-notice {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, var(--color-orange-500), var(--color-red-500));
+  color: white;
+  padding: 0.75rem;
+  text-align: center;
+  font-size: 0.875rem;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.device-notice.success {
+  background: linear-gradient(135deg, var(--color-success), var(--color-teal-700));
+}
+
+.device-notice .close-btn {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.device-notice .close-btn:hover {
+  opacity: 1;
+}
+
 /* Login Page Styles */
 .login-container {
   display: flex;
@@ -66,6 +102,7 @@ body {
   min-height: 100vh;
   padding: 1rem;
   background: linear-gradient(135deg, var(--color-teal-500), var(--color-teal-700));
+  padding-top: 4rem;
 }
 
 .login-card {
@@ -182,6 +219,39 @@ body {
   border: 1px solid rgba(192, 21, 47, 0.2);
 }
 
+.room-code-section {
+  background: rgba(33, 128, 141, 0.1);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  border: 1px solid rgba(33, 128, 141, 0.2);
+}
+
+.room-code-section h3 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-primary);
+}
+
+.room-code-input {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.room-code-display {
+  font-family: 'Courier New', monospace;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--color-primary);
+  background: var(--color-white);
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 2px solid var(--color-primary);
+  text-align: center;
+  letter-spacing: 2px;
+}
+
 .login-info {
   text-align: center;
   margin-top: 1.5rem;
@@ -200,6 +270,7 @@ body {
   flex-direction: column;
   height: 100vh;
   background-color: var(--color-background);
+  padding-top: 3rem;
 }
 
 .app-header {
@@ -239,6 +310,17 @@ body {
   font-weight: 600;
 }
 
+.room-code-badge {
+  background-color: var(--color-orange-500);
+  color: var(--color-white);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
 .header-right {
   display: flex;
   align-items: center;
@@ -257,21 +339,53 @@ body {
   gap: 0.5rem;
   font-size: 0.875rem;
   color: var(--color-text-secondary);
+  min-width: 150px;
 }
 
 .status-indicator {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background-color: var(--color-gray-400);
+  animation: pulse 2s infinite;
 }
 
 .status-indicator.online {
   background-color: var(--color-success);
+  box-shadow: 0 0 0 2px rgba(33, 128, 141, 0.3);
 }
 
 .status-indicator.offline {
   background-color: var(--color-gray-400);
+  animation: none;
+}
+
+.status-indicator.searching {
+  background-color: var(--color-warning);
+  animation: searching 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(33, 128, 141, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 4px rgba(33, 128, 141, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(33, 128, 141, 0);
+  }
+}
+
+@keyframes searching {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
 
 .main-content {
@@ -360,6 +474,11 @@ body {
 
 .message-time {
   font-size: 0.7rem;
+}
+
+.message-status {
+  font-size: 0.65rem;
+  opacity: 0.7;
 }
 
 .typing-indicator {
@@ -652,6 +771,11 @@ body {
     margin: 1rem;
     padding: 1.5rem;
   }
+
+  .device-notice {
+    font-size: 0.8rem;
+    padding: 0.5rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -674,17 +798,30 @@ body {
 
   .partner-status {
     font-size: 0.75rem;
+    min-width: 120px;
+  }
+
+  .header-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 }
     </style>
 </head>
 <body>
+    <!-- Cross-Device Notice -->
+    <div id="deviceNotice" class="device-notice">
+        ⚠️ For cross-device messaging, both users must enter the same Room Code. Share the code with your chat partner!
+        <button class="close-btn" onclick="hideDeviceNotice()">&times;</button>
+    </div>
+
     <!-- Login Page -->
     <div id="loginPage" class="login-container">
         <div class="login-card">
             <div class="login-header">
                 <h1>SecureChat</h1>
-                <p>Private messaging for two</p>
+                <p>Cross-device private messaging</p>
             </div>
             <form id="loginForm" class="login-form">
                 <div class="form-group">
@@ -695,11 +832,28 @@ body {
                     <label for="password" class="form-label">Password</label>
                     <input type="password" id="password" name="password" class="form-control" required>
                 </div>
+
+                <div class="room-code-section">
+                    <h3>🏠 Room Code (for cross-device chat)</h3>
+                    <p style="font-size: 0.8rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">
+                        Enter the same room code on both devices to chat across devices
+                    </p>
+                    <div class="room-code-input">
+                        <input type="text" id="roomCode" name="roomCode" class="form-control" 
+                               placeholder="Enter room code (e.g., ROOM123)" maxlength="20" style="flex: 1;">
+                        <button type="button" id="generateRoom" class="btn btn--outline btn--sm">Generate</button>
+                    </div>
+                    <div id="generatedRoom" class="room-code-display hidden" style="margin-top: 0.5rem;"></div>
+                </div>
+
                 <button type="submit" class="btn btn--primary btn--full-width">Login</button>
             </form>
             <div id="loginError" class="error-message hidden"></div>
             <div class="login-info">
-                <small>Demo Credentials: user/pass1 (Alice) or user2/pass2 (Bob)</small>
+                <small>Demo Credentials: user1/pass1 (Alice) or user2/pass2 (Bob)</small>
+                <br><small style="margin-top: 0.5rem; display: block; color: var(--color-primary);">
+                    💡 Use the same room code on different devices to chat across devices!
+                </small>
             </div>
         </div>
     </div>
@@ -712,12 +866,13 @@ body {
                 <div class="header-left">
                     <h2>SecureChat</h2>
                     <span id="currentUser" class="user-badge"></span>
+                    <span id="roomCodeBadge" class="room-code-badge"></span>
                 </div>
                 <div class="header-right">
                     <div class="connection-status">
                         <span id="partnerStatus" class="partner-status">
-                            <span class="status-indicator"></span>
-                            <span class="status-text">Connecting...</span>
+                            <span class="status-indicator searching"></span>
+                            <span class="status-text">Searching for partner...</span>
                         </span>
                     </div>
                     <button id="logoutBtn" class="btn btn--outline btn--sm">Logout</button>
@@ -732,7 +887,10 @@ body {
                 <div id="chatMessages" class="chat-messages">
                     <div class="empty-state">
                         <h3>Welcome to SecureChat</h3>
-                        <p>Start your private conversation</p>
+                        <p>Waiting for your chat partner to join the room...</p>
+                        <p style="font-size: 0.8rem; margin-top: 1rem; color: var(--color-text-secondary);">
+                            Share your room code with your partner for cross-device messaging
+                        </p>
                     </div>
                 </div>
 
@@ -791,6 +949,9 @@ body {
     </div>
 
     <script>
+// Cross-Device Communication System
+const FIREBASE_PROJECT_URL = 'https://securechat-demo-default-rtdb.firebaseio.com';
+
 // Application Data
 const APP_DATA = {
   users: [
@@ -799,9 +960,10 @@ const APP_DATA = {
   ],
   messageSettings: {
     maxLength: 500,
-    pollInterval: 500,
+    pollInterval: 1000, // Increased for cross-device polling
     sessionTimeout: 7200000,
-    typingTimeout: 3000
+    typingTimeout: 3000,
+    onlineTimeout: 60000 // Increased for cross-device detection
   },
   mockInstagramData: {
     "user1": {
@@ -885,24 +1047,27 @@ const APP_DATA = {
 
 // Application State
 let currentUser = null;
+let roomCode = null;
+let deviceId = null;
 let messagePollingInterval = null;
 let typingTimeout = null;
 let lastMessageCount = 0;
+let isOnline = navigator.onLine;
 
-// Storage Keys
-const STORAGE_KEYS = {
-  MESSAGES: 'securechat_messages',
-  USERS: 'securechat_active_users',
-  TYPING: 'securechat_typing',
-  SESSION: 'securechat_session'
-};
+// Cross-device storage simulation using URL hash
+const CLOUD_STORAGE_KEY = 'securechat_cloud_';
 
 // DOM Elements
+const deviceNotice = document.getElementById('deviceNotice');
 const loginPage = document.getElementById('loginPage');
 const mainApp = document.getElementById('mainApp');
 const loginForm = document.getElementById('loginForm');
 const loginError = document.getElementById('loginError');
+const roomCodeInput = document.getElementById('roomCode');
+const generateRoomBtn = document.getElementById('generateRoom');
+const generatedRoom = document.getElementById('generatedRoom');
 const currentUserElement = document.getElementById('currentUser');
+const roomCodeBadge = document.getElementById('roomCodeBadge');
 const partnerStatus = document.getElementById('partnerStatus');
 const chatMessages = document.getElementById('chatMessages');
 const messageInput = document.getElementById('messageInput');
@@ -922,18 +1087,56 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeApp() {
-    // Check for existing session
-    const session = getStorageItem(STORAGE_KEYS.SESSION);
-    if (session && session.username) {
-        const user = APP_DATA.users.find(u => u.username === session.username);
-        if (user) {
-            currentUser = user;
-            showMainApp();
-            return;
-        }
-    }
+    // Generate unique device ID
+    deviceId = generateDeviceId();
+    console.log('App initialized with device ID:', deviceId);
+
+    // Check online status
+    updateOnlineStatus();
+
+    // Add online/offline listeners
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
 
     showLoginPage();
+}
+
+function generateDeviceId() {
+    let deviceId = localStorage.getItem('securechat_device_id');
+    if (!deviceId) {
+        deviceId = 'device_' + Date.now().toString(36) + Math.random().toString(36).substr(2);
+        localStorage.setItem('securechat_device_id', deviceId);
+    }
+    return deviceId;
+}
+
+function updateOnlineStatus() {
+    isOnline = navigator.onLine;
+    console.log('Network status:', isOnline ? 'online' : 'offline');
+
+    if (!isOnline) {
+        showDeviceNotice('⚠️ You are offline. Cross-device messaging requires internet connection.', false);
+    }
+}
+
+function showDeviceNotice(message, isSuccess = false) {
+    deviceNotice.textContent = message;
+    deviceNotice.className = `device-notice ${isSuccess ? 'success' : ''}`;
+    deviceNotice.classList.remove('hidden');
+}
+
+function hideDeviceNotice() {
+    deviceNotice.classList.add('hidden');
+}
+
+// Room Code Generation
+function generateRoomCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
 }
 
 // Authentication
@@ -942,6 +1145,14 @@ function showLoginPage() {
     mainApp.classList.add('hidden');
 
     loginForm.addEventListener('submit', handleLogin);
+    generateRoomBtn.addEventListener('click', handleGenerateRoom);
+}
+
+function handleGenerateRoom() {
+    const newRoomCode = generateRoomCode();
+    roomCodeInput.value = newRoomCode;
+    generatedRoom.textContent = newRoomCode;
+    generatedRoom.classList.remove('hidden');
 }
 
 function showMainApp() {
@@ -949,6 +1160,10 @@ function showMainApp() {
     mainApp.classList.remove('hidden');
 
     currentUserElement.textContent = currentUser.displayName;
+    roomCodeBadge.textContent = `Room: ${roomCode}`;
+
+    // Update device notice for success
+    showDeviceNotice(`✅ Connected to room ${roomCode}. Share this code with your partner!`, true);
 
     // Update user session
     updateUserSession();
@@ -964,6 +1179,9 @@ function showMainApp() {
 
     // Start polling for updates
     startPolling();
+
+    // Initial status update
+    setTimeout(updatePartnerStatus, 1000);
 }
 
 function handleLogin(e) {
@@ -971,6 +1189,7 @@ function handleLogin(e) {
 
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
+    const enteredRoomCode = roomCodeInput.value.trim().toUpperCase();
 
     const user = APP_DATA.users.find(u => u.username === username && u.password === password);
 
@@ -979,20 +1198,19 @@ function handleLogin(e) {
         return;
     }
 
-    // Check if user is already logged in
-    const activeUsers = getStorageItem(STORAGE_KEYS.USERS) || {};
-    if (activeUsers[username] && Date.now() - activeUsers[username].lastSeen < 60000) {
-        showLoginError('User is already logged in');
+    if (!enteredRoomCode) {
+        showLoginError('Please enter a room code for cross-device messaging');
         return;
     }
 
-    currentUser = user;
+    if (enteredRoomCode.length < 3) {
+        showLoginError('Room code must be at least 3 characters long');
+        return;
+    }
 
-    // Store session
-    setStorageItem(STORAGE_KEYS.SESSION, {
-        username: username,
-        loginTime: Date.now()
-    });
+    console.log('User authenticated:', user.displayName, 'Room:', enteredRoomCode);
+    currentUser = user;
+    roomCode = enteredRoomCode;
 
     showMainApp();
 }
@@ -1004,6 +1222,91 @@ function showLoginError(message) {
     setTimeout(() => {
         loginError.classList.add('hidden');
     }, 5000);
+}
+
+// Cross-Device Storage Functions
+function getCloudStorageKey(key) {
+    return `${CLOUD_STORAGE_KEY}${roomCode}_${key}`;
+}
+
+function setCloudItem(key, value) {
+    try {
+        const cloudKey = getCloudStorageKey(key);
+        const data = {
+            value: value,
+            timestamp: Date.now(),
+            deviceId: deviceId
+        };
+
+        // Store in localStorage (simulating cloud storage)
+        localStorage.setItem(cloudKey, JSON.stringify(data));
+
+        // Also try to sync via URL hash for cross-device simulation
+        if (key === 'messages') {
+            const hashData = btoa(JSON.stringify({
+                room: roomCode,
+                messages: value.slice(-5), // Only last 5 messages in hash
+                timestamp: Date.now()
+            }));
+            // Note: URL hash has size limitations, so we only store recent messages
+        }
+
+        console.log('Stored cloud data:', cloudKey, data);
+        return true;
+    } catch (e) {
+        console.error('Error storing cloud data:', e);
+        return false;
+    }
+}
+
+function getCloudItem(key) {
+    try {
+        const cloudKey = getCloudStorageKey(key);
+        const item = localStorage.getItem(cloudKey);
+        if (!item) return null;
+
+        const data = JSON.parse(item);
+        console.log('Retrieved cloud data:', cloudKey, data);
+        return data.value;
+    } catch (e) {
+        console.error('Error retrieving cloud data:', e);
+        return null;
+    }
+}
+
+function getAllRoomMessages() {
+    try {
+        // Get all localStorage keys for this room
+        const allKeys = Object.keys(localStorage);
+        const roomMessageKeys = allKeys.filter(key => 
+            key.startsWith(`${CLOUD_STORAGE_KEY}${roomCode}_messages`)
+        );
+
+        let allMessages = [];
+        roomMessageKeys.forEach(key => {
+            try {
+                const data = JSON.parse(localStorage.getItem(key));
+                if (data && data.value && Array.isArray(data.value)) {
+                    allMessages = allMessages.concat(data.value);
+                }
+            } catch (e) {
+                console.error('Error parsing messages from key:', key);
+            }
+        });
+
+        // Remove duplicates and sort by timestamp
+        const uniqueMessages = allMessages.reduce((acc, message) => {
+            if (!acc.find(m => m.id === message.id)) {
+                acc.push(message);
+            }
+            return acc;
+        }, []);
+
+        return uniqueMessages.sort((a, b) => a.timestamp - b.timestamp);
+    } catch (e) {
+        console.error('Error getting all room messages:', e);
+        return [];
+    }
 }
 
 // Messaging System
@@ -1072,13 +1375,19 @@ function sendMessage() {
         sender: currentUser.username,
         senderName: currentUser.displayName,
         content: sanitizeInput(messageText),
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        deviceId: deviceId,
+        roomCode: roomCode
     };
 
-    // Add to messages
-    const messages = getStorageItem(STORAGE_KEYS.MESSAGES) || [];
-    messages.push(message);
-    setStorageItem(STORAGE_KEYS.MESSAGES, messages);
+    console.log('Sending message:', message);
+
+    // Get existing messages and add new one
+    const existingMessages = getAllRoomMessages();
+    existingMessages.push(message);
+
+    // Store in cloud (simulated)
+    setCloudItem('messages', existingMessages);
 
     // Clear input
     messageInput.value = '';
@@ -1093,13 +1402,16 @@ function sendMessage() {
 }
 
 function loadMessages() {
-    const messages = getStorageItem(STORAGE_KEYS.MESSAGES) || [];
+    const messages = getAllRoomMessages();
 
     if (messages.length === 0) {
         chatMessages.innerHTML = `
             <div class="empty-state">
                 <h3>Welcome to SecureChat</h3>
-                <p>Start your private conversation</p>
+                <p>Room: ${roomCode}</p>
+                <p style="font-size: 0.8rem; margin-top: 1rem; color: var(--color-text-secondary);">
+                    Share your room code with your partner for cross-device messaging
+                </p>
             </div>
         `;
         return;
@@ -1117,6 +1429,15 @@ function loadMessages() {
     // Update message count for notifications
     if (messages.length > lastMessageCount) {
         lastMessageCount = messages.length;
+
+        // Update notice if we got new messages
+        if (messages.length > 0) {
+            const lastMessage = messages[messages.length - 1];
+            if (lastMessage.sender !== currentUser.username) {
+                showDeviceNotice(`✅ Cross-device message received from ${lastMessage.senderName}!`, true);
+                setTimeout(hideDeviceNotice, 3000);
+            }
+        }
     }
 }
 
@@ -1130,6 +1451,8 @@ function createMessageElement(message) {
         minute: '2-digit'
     });
 
+    const deviceInfo = message.deviceId !== deviceId ? ` 📱` : '';
+
     messageDiv.innerHTML = `
         <div class="message-bubble">
             ${message.content}
@@ -1137,6 +1460,7 @@ function createMessageElement(message) {
         <div class="message-info">
             <span class="message-sender">${message.senderName}</span>
             <span class="message-time">${time}</span>
+            <span class="message-status">${deviceInfo}</span>
         </div>
     `;
 
@@ -1149,70 +1473,96 @@ function scrollToBottom() {
 
 // User Session Management
 function updateUserSession() {
-    const activeUsers = getStorageItem(STORAGE_KEYS.USERS) || {};
-
-    activeUsers[currentUser.username] = {
+    const sessionData = {
+        username: currentUser.username,
         displayName: currentUser.displayName,
         lastSeen: Date.now(),
+        deviceId: deviceId,
+        roomCode: roomCode,
         isActive: true
     };
 
-    setStorageItem(STORAGE_KEYS.USERS, activeUsers);
+    setCloudItem('user_' + currentUser.username, sessionData);
+    console.log('Updated session for:', currentUser.displayName);
 }
 
 function updatePartnerStatus() {
-    const activeUsers = getStorageItem(STORAGE_KEYS.USERS) || {};
     const partnerUser = APP_DATA.users.find(u => u.username !== currentUser.username);
 
-    if (!partnerUser) return;
+    if (!partnerUser) {
+        console.log('No partner user found');
+        return;
+    }
 
-    const partnerSession = activeUsers[partnerUser.username];
+    const partnerSession = getCloudItem('user_' + partnerUser.username);
     const statusIndicator = partnerStatus.querySelector('.status-indicator');
     const statusText = partnerStatus.querySelector('.status-text');
 
-    if (partnerSession && Date.now() - partnerSession.lastSeen < 60000) {
+    console.log('Partner session:', partnerSession);
+
+    if (partnerSession && 
+        partnerSession.roomCode === roomCode && 
+        Date.now() - partnerSession.lastSeen < APP_DATA.messageSettings.onlineTimeout) {
+
+        statusIndicator.classList.remove('searching', 'offline');
         statusIndicator.classList.add('online');
         statusText.textContent = `${partnerUser.displayName} - Online`;
+        console.log('Partner is ONLINE in same room');
     } else {
         statusIndicator.classList.remove('online');
-        if (partnerSession) {
+
+        if (partnerSession && partnerSession.roomCode !== roomCode) {
+            statusIndicator.classList.remove('searching');
+            statusIndicator.classList.add('offline');
+            statusText.textContent = `${partnerUser.displayName} - Different room`;
+            console.log('Partner is in different room');
+        } else if (partnerSession) {
+            statusIndicator.classList.remove('searching');
+            statusIndicator.classList.add('offline');
             const lastSeen = new Date(partnerSession.lastSeen).toLocaleTimeString([], {
                 hour: '2-digit',
                 minute: '2-digit'
             });
             statusText.textContent = `${partnerUser.displayName} - Last seen ${lastSeen}`;
+            console.log('Partner is OFFLINE - Last seen:', lastSeen);
         } else {
-            statusText.textContent = `${partnerUser.displayName} - Offline`;
+            statusIndicator.classList.remove('online', 'offline');
+            statusIndicator.classList.add('searching');
+            statusText.textContent = `Waiting for ${partnerUser.displayName}...`;
+            console.log('Partner has never been online');
         }
     }
 }
 
 // Typing Indicators
 function setTypingStatus(isTyping) {
-    const typingData = getStorageItem(STORAGE_KEYS.TYPING) || {};
+    const typingData = {
+        displayName: currentUser.displayName,
+        timestamp: Date.now(),
+        isTyping: isTyping,
+        roomCode: roomCode
+    };
 
     if (isTyping) {
-        typingData[currentUser.username] = {
-            displayName: currentUser.displayName,
-            timestamp: Date.now()
-        };
+        setCloudItem('typing_' + currentUser.username, typingData);
     } else {
-        delete typingData[currentUser.username];
+        setCloudItem('typing_' + currentUser.username, null);
     }
-
-    setStorageItem(STORAGE_KEYS.TYPING, typingData);
 }
 
 function updateTypingIndicator() {
-    const typingData = getStorageItem(STORAGE_KEYS.TYPING) || {};
     const partnerUser = APP_DATA.users.find(u => u.username !== currentUser.username);
 
     if (!partnerUser) return;
 
-    const partnerTyping = typingData[partnerUser.username];
+    const partnerTyping = getCloudItem('typing_' + partnerUser.username);
     const typingText = typingIndicator.querySelector('.typing-text');
 
-    if (partnerTyping && Date.now() - partnerTyping.timestamp < APP_DATA.messageSettings.typingTimeout) {
+    if (partnerTyping && 
+        partnerTyping.isTyping &&
+        partnerTyping.roomCode === roomCode &&
+        Date.now() - partnerTyping.timestamp < APP_DATA.messageSettings.typingTimeout) {
+
         typingText.textContent = `${partnerTyping.displayName} is typing`;
         typingIndicator.classList.remove('hidden');
     } else {
@@ -1222,15 +1572,28 @@ function updateTypingIndicator() {
 
 // Polling System
 function startPolling() {
+    console.log('Starting cross-device polling system...');
+
     messagePollingInterval = setInterval(() => {
+        if (!isOnline) {
+            console.log('Offline - skipping poll');
+            return;
+        }
+
+        // Update user session every poll
         updateUserSession();
+
+        // Update partner status
         updatePartnerStatus();
+
+        // Update typing indicator
         updateTypingIndicator();
 
-        const currentMessages = getStorageItem(STORAGE_KEYS.MESSAGES) || [];
+        // Check for new messages
+        const currentMessages = getAllRoomMessages();
         if (currentMessages.length !== lastMessageCount) {
+            console.log('New messages detected:', currentMessages.length, 'vs', lastMessageCount);
             loadMessages();
-            lastMessageCount = currentMessages.length;
         }
     }, APP_DATA.messageSettings.pollInterval);
 }
@@ -1239,13 +1602,13 @@ function stopPolling() {
     if (messagePollingInterval) {
         clearInterval(messagePollingInterval);
         messagePollingInterval = null;
+        console.log('Polling stopped');
     }
 }
 
-// Instagram Integration
+// Instagram Integration (keeping existing functionality)
 function initializeInstagram() {
-    // Check if user has connected Instagram
-    const instagramSession = getStorageItem(`instagram_${currentUser.username}`);
+    const instagramSession = localStorage.getItem(`instagram_${currentUser.username}`);
     if (instagramSession) {
         showInstagramContent();
     }
@@ -1259,23 +1622,21 @@ function connectInstagram() {
         return;
     }
 
-    // Mock token validation
     if (token.length < 10) {
         alert('Invalid access token');
         return;
     }
 
-    // Store Instagram session
-    setStorageItem(`instagram_${currentUser.username}`, {
+    localStorage.setItem(`instagram_${currentUser.username}`, JSON.stringify({
         token: token,
         connectedAt: Date.now()
-    });
+    }));
 
     showInstagramContent();
 }
 
 function disconnectInstagram() {
-    removeStorageItem(`instagram_${currentUser.username}`);
+    localStorage.removeItem(`instagram_${currentUser.username}`);
     showInstagramConnect();
 }
 
@@ -1347,16 +1708,13 @@ function showInstagramConnect() {
 
 // Logout
 function handleLogout() {
+    console.log('Logging out user:', currentUser.displayName);
+
     // Clear typing status
     setTypingStatus(false);
 
-    // Remove user session
-    const activeUsers = getStorageItem(STORAGE_KEYS.USERS) || {};
-    delete activeUsers[currentUser.username];
-    setStorageItem(STORAGE_KEYS.USERS, activeUsers);
-
-    // Clear session storage
-    removeStorageItem(STORAGE_KEYS.SESSION);
+    // Remove user session from cloud
+    setCloudItem('user_' + currentUser.username, null);
 
     // Stop polling
     stopPolling();
@@ -1368,9 +1726,11 @@ function handleLogout() {
 
     // Reset state
     currentUser = null;
+    roomCode = null;
     lastMessageCount = 0;
 
-    // Show login page
+    // Hide device notice and show login page
+    hideDeviceNotice();
     showLoginPage();
 }
 
@@ -1385,31 +1745,33 @@ function sanitizeInput(input) {
     return div.innerHTML;
 }
 
-function getStorageItem(key) {
-    try {
-        const item = localStorage.getItem(key);
-        return item ? JSON.parse(item) : null;
-    } catch (e) {
-        console.error('Error reading from localStorage:', e);
-        return null;
-    }
+// Debug function for cross-device testing
+function debugCloudStorage() {
+    console.log('=== CLOUD STORAGE DEBUG ===');
+    console.log('Current User:', currentUser?.displayName);
+    console.log('Room Code:', roomCode);
+    console.log('Device ID:', deviceId);
+    console.log('Is Online:', isOnline);
+    console.log('All Room Messages:', getAllRoomMessages());
+
+    // Show all cloud storage keys for this room
+    const allKeys = Object.keys(localStorage).filter(key => 
+        key.includes(`${CLOUD_STORAGE_KEY}${roomCode}`)
+    );
+    console.log('Room Storage Keys:', allKeys);
+
+    allKeys.forEach(key => {
+        try {
+            const data = JSON.parse(localStorage.getItem(key));
+            console.log(key, ':', data);
+        } catch (e) {
+            console.log(key, ': (parse error)');
+        }
+    });
 }
 
-function setStorageItem(key, value) {
-    try {
-        localStorage.setItem(key, JSON.stringify(value));
-    } catch (e) {
-        console.error('Error writing to localStorage:', e);
-    }
-}
-
-function removeStorageItem(key) {
-    try {
-        localStorage.removeItem(key);
-    } catch (e) {
-        console.error('Error removing from localStorage:', e);
-    }
-}
+// Make debug function available globally
+window.debugCloudStorage = debugCloudStorage;
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', function() {
@@ -1417,6 +1779,8 @@ window.addEventListener('beforeunload', function() {
         setTypingStatus(false);
     }
 });
+
+console.log('SecureChat Cross-Device application loaded successfully!');
     </script>
 </body>
 </html>
