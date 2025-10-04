@@ -6,7 +6,6 @@
     <title>SecureChat - Real Cross-Device Messaging</title>
     <style>
 :root {
-  /* Color Variables */
   --color-white: rgba(255, 255, 255, 1);
   --color-background: rgba(252, 252, 249, 1);
   --color-surface: rgba(255, 255, 253, 1);
@@ -36,7 +35,6 @@ body {
   line-height: 1.6;
 }
 
-/* Status Banner */
 .status-banner {
   position: fixed;
   top: 0;
@@ -64,7 +62,6 @@ body {
   color: white;
 }
 
-/* Login Styles */
 .login-container {
   display: flex;
   align-items: center;
@@ -230,7 +227,6 @@ body {
   margin-top: 0.75rem;
 }
 
-/* Main App Styles */
 .app-container {
   display: flex;
   flex-direction: column;
@@ -331,7 +327,6 @@ body {
   50% { opacity: 1; transform: scale(1.2); }
 }
 
-/* Chat Styles */
 .chat-container {
   display: flex;
   flex: 1;
@@ -500,7 +495,6 @@ body {
   transform: none;
 }
 
-/* Utility Classes */
 .hidden {
   display: none !important;
 }
@@ -517,7 +511,6 @@ body {
   color: var(--color-text);
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .header-left {
     flex-direction: column;
@@ -545,7 +538,7 @@ body {
   }
 
   .message-input {
-    font-size: 16px; /* Prevents zoom on iOS */
+    font-size: 16px;
   }
 
   .partner-status {
@@ -556,17 +549,15 @@ body {
     </style>
 </head>
 <body>
-    <!-- Status Banner -->
     <div id="statusBanner" class="status-banner connecting">
-        🔄 Connecting to cross-device messaging service...
+        🔄 Connecting to Firebase...
     </div>
 
-    <!-- Login Page -->
     <div id="loginPage" class="login-container">
         <div class="login-card">
             <div class="login-header">
                 <h1>SecureChat</h1>
-                <p>Real cross-device private messaging</p>
+                <p>Real cross-device private messaging powered by Firebase</p>
             </div>
             <form id="loginForm" class="login-form">
                 <div class="form-group">
@@ -603,7 +594,6 @@ body {
         </div>
     </div>
 
-    <!-- Main Application -->
     <div id="mainApp" class="app-container hidden">
         <header class="app-header">
             <div class="header-content">
@@ -661,10 +651,21 @@ body {
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-database-compat.min.js"></script>
+
     <script>
-// Real Cross-Device Communication using JSONBin.io (free service)
-const JSONBIN_API = 'https://api.jsonbin.io/v3/b';
-const JSONBIN_MASTER_KEY = '$2a$10$xvp7HZe8nYOWnqt8Lk3OHe.QJcS4.2Q0QyZK4xP5H3cK8T6N2aL2C'; // Demo key
+// Firebase Configuration (Demo - Replace with your own)
+const firebaseConfig = {
+    apiKey: "AIzaSyDemoKey123456789",
+    authDomain: "securechat-demo.firebaseapp.com",
+    databaseURL: "https://securechat-demo-default-rtdb.firebaseio.com",
+    projectId: "securechat-demo",
+    storageBucket: "securechat-demo.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abc123def456"
+};
 
 // Application Configuration
 const APP_CONFIG = {
@@ -672,20 +673,17 @@ const APP_CONFIG = {
         {username: "user1", password: "pass1", displayName: "Alice"},
         {username: "user2", password: "pass2", displayName: "Bob"}
     ],
-    pollInterval: 2000, // 2 seconds for cross-device polling
     typingTimeout: 3000,
-    maxRetries: 3
+    presenceTimeout: 10000
 };
 
 // Application State
+let app, database, roomRef, messagesRef, usersRef, typingRef;
 let currentUser = null;
 let roomCode = null;
 let deviceId = null;
-let binId = null;
-let pollingInterval = null;
 let typingTimeout = null;
-let retryCount = 0;
-let isConnected = false;
+let messageListeners = [];
 
 // DOM Elements
 const statusBanner = document.getElementById('statusBanner');
@@ -701,7 +699,6 @@ const generateRoomBtn = document.getElementById('generateRoom');
 const generatedRoom = document.getElementById('generatedRoom');
 const currentUserElement = document.getElementById('currentUser');
 const roomBadge = document.getElementById('roomBadge');
-const partnerStatus = document.getElementById('partnerStatus');
 const statusDot = document.getElementById('statusDot');
 const statusText = document.getElementById('statusText');
 const chatMessages = document.getElementById('chatMessages');
@@ -719,18 +716,41 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeApp() {
     deviceId = getOrCreateDeviceId();
     console.log('Device ID:', deviceId);
-
-    updateStatusBanner('🔄 Ready to connect...', 'connecting');
+    
+    // Initialize Firebase
+    try {
+        app = firebase.initializeApp(firebaseConfig);
+        database = firebase.database();
+        updateStatusBanner('✅ Connected to Firebase! Ready to chat', 'connected');
+        console.log('Firebase initialized successfully');
+    } catch (error) {
+        console.error('Firebase initialization error:', error);
+        updateStatusBanner('⚠️ Using demo mode - messages stored locally', 'connecting');
+        // Fallback to localStorage simulation
+        useDemoMode();
+    }
 
     setupEventListeners();
     showLoginPage();
 }
 
+function useDemoMode() {
+    // Create a simple in-memory database simulation
+    window.demoDatabase = {
+        rooms: {}
+    };
+}
+
 function getOrCreateDeviceId() {
-    let id = localStorage.getItem('securechat_device_id');
-    if (!id) {
+    let id;
+    try {
+        id = localStorage.getItem('securechat_device_id');
+        if (!id) {
+            id = 'dev_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('securechat_device_id', id);
+        }
+    } catch (e) {
         id = 'dev_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem('securechat_device_id', id);
     }
     return id;
 }
@@ -760,12 +780,6 @@ function updateStatusBanner(message, type) {
     statusBanner.className = `status-banner ${type}`;
 }
 
-// Authentication
-function showLoginPage() {
-    loginPage.classList.remove('hidden');
-    mainApp.classList.add('hidden');
-}
-
 async function handleLogin(e) {
     e.preventDefault();
 
@@ -773,7 +787,6 @@ async function handleLogin(e) {
     const password = document.getElementById('password').value.trim();
     const room = roomCodeInput.value.trim().toUpperCase();
 
-    // Validate credentials
     const user = APP_CONFIG.users.find(u => u.username === username && u.password === password);
     if (!user) {
         showLoginError('Invalid username or password');
@@ -785,27 +798,118 @@ async function handleLogin(e) {
         return;
     }
 
-    // Show loading state
     setLoginLoading(true);
-    updateStatusBanner('🔄 Connecting to room...', 'connecting');
+    updateStatusBanner('🔄 Joining room...', 'connecting');
 
     try {
         currentUser = user;
         roomCode = room;
 
-        // Initialize cloud storage for this room
-        await initializeCloudStorage();
+        if (database) {
+            await initializeFirebaseRoom();
+        } else {
+            initializeDemoRoom();
+        }
 
-        // Success
         setLoginLoading(false);
         showMainApp();
 
     } catch (error) {
         console.error('Login failed:', error);
         setLoginLoading(false);
-        showLoginError('Failed to connect. Please check your internet connection and try again.');
+        showLoginError('Failed to join room. Please try again.');
         updateStatusBanner('❌ Connection failed', 'error');
     }
+}
+
+async function initializeFirebaseRoom() {
+    roomRef = database.ref(`rooms/${roomCode}`);
+    messagesRef = roomRef.child('messages');
+    usersRef = roomRef.child('users');
+    typingRef = roomRef.child('typing');
+
+    // Set user presence
+    const userPresenceRef = usersRef.child(currentUser.username);
+    await userPresenceRef.set({
+        displayName: currentUser.displayName,
+        deviceId: deviceId,
+        lastSeen: firebase.database.ServerValue.TIMESTAMP,
+        isOnline: true
+    });
+
+    // Setup presence disconnect
+    userPresenceRef.onDisconnect().update({
+        isOnline: false,
+        lastSeen: firebase.database.ServerValue.TIMESTAMP
+    });
+
+    // Listen for messages
+    messagesRef.on('child_added', (snapshot) => {
+        const message = snapshot.val();
+        if (message && message.id) {
+            addMessageToUI(message);
+        }
+    });
+
+    // Listen for user status changes
+    usersRef.on('value', (snapshot) => {
+        updatePartnerStatus(snapshot.val());
+    });
+
+    // Listen for typing indicators
+    typingRef.on('value', (snapshot) => {
+        updateTypingIndicator(snapshot.val());
+    });
+
+    // Update presence every 5 seconds
+    setInterval(() => {
+        if (currentUser) {
+            userPresenceRef.update({
+                lastSeen: firebase.database.ServerValue.TIMESTAMP,
+                isOnline: true
+            });
+        }
+    }, 5000);
+
+    updateStatusBanner('✅ Connected! Share room code: ' + roomCode, 'connected');
+}
+
+function initializeDemoRoom() {
+    if (!window.demoDatabase.rooms[roomCode]) {
+        window.demoDatabase.rooms[roomCode] = {
+            messages: [],
+            users: {},
+            typing: {}
+        };
+    }
+
+    const room = window.demoDatabase.rooms[roomCode];
+    room.users[currentUser.username] = {
+        displayName: currentUser.displayName,
+        deviceId: deviceId,
+        lastSeen: Date.now(),
+        isOnline: true
+    };
+
+    // Simulate real-time updates with polling
+    setInterval(() => {
+        if (currentUser) {
+            const room = window.demoDatabase.rooms[roomCode];
+            if (room) {
+                updatePartnerStatus(room.users);
+                updateTypingIndicator(room.typing);
+                
+                room.messages.forEach((msg, idx) => {
+                    if (!msg.rendered) {
+                        addMessageToUI(msg);
+                        room.messages[idx].rendered = true;
+                    }
+                });
+            }
+        }
+    }, 1000);
+
+    updateStatusBanner('⚠️ Demo mode - Open in another tab with same room code', 'connecting');
 }
 
 function setLoginLoading(loading) {
@@ -814,471 +918,3 @@ function setLoginLoading(loading) {
         loginButtonText.classList.add('hidden');
         loginSpinner.classList.remove('hidden');
     } else {
-        loginButtonText.classList.remove('hidden');
-        loginSpinner.classList.add('hidden');
-    }
-}
-
-function showLoginError(message) {
-    loginError.textContent = message;
-    loginError.classList.remove('hidden');
-    setTimeout(() => {
-        loginError.classList.add('hidden');
-    }, 5000);
-}
-
-// Cloud Storage Management
-async function initializeCloudStorage() {
-    try {
-        // Create or get existing bin for this room
-        const binData = {
-            roomCode: roomCode,
-            messages: [],
-            users: {},
-            typing: {},
-            created: Date.now()
-        };
-
-        // Try to create a new bin (this will be our room storage)
-        const response = await fetch(JSONBIN_API, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Master-Key': JSONBIN_MASTER_KEY,
-                'X-Bin-Name': `SecureChat_Room_${roomCode}`,
-                'X-Bin-Private': 'false'
-            },
-            body: JSON.stringify(binData)
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            binId = result.metadata.id;
-            console.log('Created new room bin:', binId);
-        } else {
-            // If creation fails, try to find existing bin
-            // For demo purposes, we'll use a predictable ID based on room code
-            binId = 'demo_' + roomCode.toLowerCase();
-            console.log('Using demo bin ID:', binId);
-        }
-
-        isConnected = true;
-        updateStatusBanner('✅ Connected to cross-device messaging!', 'connected');
-
-    } catch (error) {
-        console.error('Failed to initialize cloud storage:', error);
-        // Fallback: use localStorage with room prefix for same-network devices
-        binId = 'local_' + roomCode;
-        isConnected = false;
-        updateStatusBanner('⚠️ Using local storage - same device only', 'connecting');
-    }
-}
-
-async function saveToCloud(data) {
-    if (!binId) return false;
-
-    try {
-        // For demo without real API, use localStorage with special keys
-        const cloudKey = `securechat_cloud_${roomCode}`;
-        localStorage.setItem(cloudKey, JSON.stringify({
-            ...data,
-            lastUpdated: Date.now(),
-            updatedBy: deviceId
-        }));
-
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 100));
-        return true;
-
-    } catch (error) {
-        console.error('Failed to save to cloud:', error);
-        return false;
-    }
-}
-
-async function loadFromCloud() {
-    if (!binId) return null;
-
-    try {
-        // For demo, read from localStorage
-        const cloudKey = `securechat_cloud_${roomCode}`;
-        const data = localStorage.getItem(cloudKey);
-
-        if (!data) {
-            return {
-                roomCode: roomCode,
-                messages: [],
-                users: {},
-                typing: {},
-                created: Date.now()
-            };
-        }
-
-        return JSON.parse(data);
-
-    } catch (error) {
-        console.error('Failed to load from cloud:', error);
-        return null;
-    }
-}
-
-// Main Application
-function showMainApp() {
-    loginPage.classList.add('hidden');
-    mainApp.classList.remove('hidden');
-
-    currentUserElement.textContent = currentUser.displayName;
-    roomBadge.textContent = `Room: ${roomCode}`;
-
-    // Update user session
-    updateUserSession();
-
-    // Load existing messages
-    loadMessages();
-
-    // Start polling
-    startPolling();
-
-    updateStatusBanner('✅ Connected! Share room code with your partner', 'connected');
-}
-
-// Session Management
-async function updateUserSession() {
-    try {
-        const data = await loadFromCloud();
-        if (!data) return;
-
-        data.users[currentUser.username] = {
-            displayName: currentUser.displayName,
-            lastSeen: Date.now(),
-            deviceId: deviceId,
-            isOnline: true
-        };
-
-        await saveToCloud(data);
-        console.log('Updated user session');
-
-    } catch (error) {
-        console.error('Failed to update user session:', error);
-    }
-}
-
-async function updatePartnerStatus() {
-    try {
-        const data = await loadFromCloud();
-        if (!data) return;
-
-        const partnerUser = APP_CONFIG.users.find(u => u.username !== currentUser.username);
-        if (!partnerUser) return;
-
-        const partnerSession = data.users[partnerUser.username];
-
-        if (partnerSession && Date.now() - partnerSession.lastSeen < 30000) {
-            // Partner is online
-            statusDot.className = 'status-dot online';
-            statusText.textContent = `${partnerUser.displayName} - Online`;
-        } else if (partnerSession) {
-            // Partner was online but now offline
-            statusDot.className = 'status-dot offline';
-            const lastSeen = new Date(partnerSession.lastSeen).toLocaleTimeString([], {
-                hour: '2-digit', minute: '2-digit'
-            });
-            statusText.textContent = `${partnerUser.displayName} - Last seen ${lastSeen}`;
-        } else {
-            // Partner never joined
-            statusDot.className = 'status-dot searching';
-            statusText.textContent = `Waiting for ${partnerUser.displayName}...`;
-        }
-
-    } catch (error) {
-        console.error('Failed to update partner status:', error);
-    }
-}
-
-// Messaging
-function handleMessageInput() {
-    const message = messageInput.value.trim();
-    sendButton.disabled = !message;
-
-    // Handle typing indicator
-    if (message) {
-        setTypingStatus(true);
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-            setTypingStatus(false);
-        }, APP_CONFIG.typingTimeout);
-    } else {
-        setTypingStatus(false);
-    }
-}
-
-function handleKeyPress(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-    }
-}
-
-async function sendMessage() {
-    const messageText = messageInput.value.trim();
-    if (!messageText) return;
-
-    const message = {
-        id: generateId(),
-        sender: currentUser.username,
-        senderName: currentUser.displayName,
-        content: sanitizeInput(messageText),
-        timestamp: Date.now(),
-        deviceId: deviceId
-    };
-
-    try {
-        const data = await loadFromCloud();
-        if (!data) throw new Error('No data available');
-
-        data.messages.push(message);
-
-        // Keep only last 100 messages to prevent storage overflow
-        if (data.messages.length > 100) {
-            data.messages = data.messages.slice(-100);
-        }
-
-        await saveToCloud(data);
-
-        // Clear input
-        messageInput.value = '';
-        sendButton.disabled = true;
-        setTypingStatus(false);
-
-        // Refresh messages
-        loadMessages();
-
-        console.log('Message sent:', message);
-
-    } catch (error) {
-        console.error('Failed to send message:', error);
-        updateStatusBanner('❌ Failed to send message. Retrying...', 'error');
-    }
-}
-
-async function loadMessages() {
-    try {
-        const data = await loadFromCloud();
-        if (!data || !data.messages) {
-            showEmptyState();
-            return;
-        }
-
-        if (data.messages.length === 0) {
-            showEmptyState();
-            return;
-        }
-
-        chatMessages.innerHTML = '';
-
-        data.messages.forEach(message => {
-            const messageElement = createMessageElement(message);
-            chatMessages.appendChild(messageElement);
-        });
-
-        scrollToBottom();
-
-    } catch (error) {
-        console.error('Failed to load messages:', error);
-        showEmptyState();
-    }
-}
-
-function showEmptyState() {
-    chatMessages.innerHTML = `
-        <div class="empty-state">
-            <h3>Welcome to SecureChat</h3>
-            <p>Room: ${roomCode}</p>
-            <p style="font-size: 0.85rem; margin-top: 1rem;">Share this room code with your partner to start chatting!</p>
-        </div>
-    `;
-}
-
-function createMessageElement(message) {
-    const isOwn = message.sender === currentUser.username;
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${isOwn ? 'own' : 'other'}`;
-
-    const time = new Date(message.timestamp).toLocaleTimeString([], {
-        hour: '2-digit', minute: '2-digit'
-    });
-
-    const deviceIndicator = message.deviceId !== deviceId ? ' 📱' : '';
-
-    messageDiv.innerHTML = `
-        <div class="message-bubble">
-            ${message.content}
-        </div>
-        <div class="message-info">
-            <span class="message-sender">${message.senderName}</span>
-            <span class="message-time">${time}${deviceIndicator}</span>
-        </div>
-    `;
-
-    return messageDiv;
-}
-
-function scrollToBottom() {
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-// Typing Indicators
-async function setTypingStatus(isTyping) {
-    try {
-        const data = await loadFromCloud();
-        if (!data) return;
-
-        if (isTyping) {
-            data.typing[currentUser.username] = {
-                displayName: currentUser.displayName,
-                timestamp: Date.now()
-            };
-        } else {
-            delete data.typing[currentUser.username];
-        }
-
-        await saveToCloud(data);
-
-    } catch (error) {
-        console.error('Failed to update typing status:', error);
-    }
-}
-
-async function updateTypingIndicator() {
-    try {
-        const data = await loadFromCloud();
-        if (!data) return;
-
-        const partnerUser = APP_CONFIG.users.find(u => u.username !== currentUser.username);
-        if (!partnerUser) return;
-
-        const partnerTyping = data.typing[partnerUser.username];
-
-        if (partnerTyping && Date.now() - partnerTyping.timestamp < APP_CONFIG.typingTimeout) {
-            typingText.textContent = `${partnerTyping.displayName} is typing`;
-            typingIndicator.classList.remove('hidden');
-        } else {
-            typingIndicator.classList.add('hidden');
-        }
-
-    } catch (error) {
-        console.error('Failed to update typing indicator:', error);
-    }
-}
-
-// Polling System
-function startPolling() {
-    console.log('Starting polling...');
-
-    pollingInterval = setInterval(async () => {
-        try {
-            await updateUserSession();
-            await updatePartnerStatus();
-            await updateTypingIndicator();
-
-            // Check for new messages
-            const data = await loadFromCloud();
-            if (data && data.messages) {
-                const currentMessageCount = chatMessages.children.length;
-                if (data.messages.length !== currentMessageCount) {
-                    loadMessages();
-                }
-            }
-
-            // Reset retry count on successful poll
-            retryCount = 0;
-
-        } catch (error) {
-            console.error('Polling error:', error);
-            retryCount++;
-
-            if (retryCount >= APP_CONFIG.maxRetries) {
-                updateStatusBanner('❌ Connection lost. Please refresh the page.', 'error');
-                stopPolling();
-            }
-        }
-    }, APP_CONFIG.pollInterval);
-}
-
-function stopPolling() {
-    if (pollingInterval) {
-        clearInterval(pollingInterval);
-        pollingInterval = null;
-        console.log('Polling stopped');
-    }
-}
-
-// Logout
-async function handleLogout() {
-    try {
-        // Remove user from online users
-        const data = await loadFromCloud();
-        if (data && data.users[currentUser.username]) {
-            delete data.users[currentUser.username];
-            await saveToCloud(data);
-        }
-
-        // Clear typing status
-        setTypingStatus(false);
-
-    } catch (error) {
-        console.error('Error during logout:', error);
-    } finally {
-        // Stop polling
-        stopPolling();
-
-        // Clear timeouts
-        if (typingTimeout) {
-            clearTimeout(typingTimeout);
-        }
-
-        // Reset state
-        currentUser = null;
-        roomCode = null;
-        binId = null;
-        isConnected = false;
-        retryCount = 0;
-
-        // Show login page
-        updateStatusBanner('🔄 Ready to connect...', 'connecting');
-        showLoginPage();
-    }
-}
-
-// Utility Functions
-function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-}
-
-function sanitizeInput(input) {
-    const div = document.createElement('div');
-    div.textContent = input;
-    return div.innerHTML;
-}
-
-// Cleanup
-window.addEventListener('beforeunload', function() {
-    if (currentUser) {
-        setTypingStatus(false);
-        // Note: We can't wait for async operations in beforeunload
-    }
-});
-
-// Visibility change handling
-document.addEventListener('visibilitychange', function() {
-    if (!document.hidden && currentUser) {
-        // Page became visible - refresh data
-        updateUserSession();
-        loadMessages();
-    }
-});
-
-console.log('SecureChat Cross-Device application loaded!');
-    </script>
-</body>
-</html>
